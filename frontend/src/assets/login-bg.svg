@@ -1,0 +1,108 @@
+<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 主背景渐变 -->
+    <linearGradient id="mainBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0e27;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1a1f3a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f1419;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 光晕效果 -->
+    <radialGradient id="glow1">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:0" />
+    </radialGradient>
+    
+    <radialGradient id="glow2">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:0.25" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:0" />
+    </radialGradient>
+    
+    <radialGradient id="glow3">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:0.2" />
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <!-- 主背景 -->
+  <rect width="1920" height="1080" fill="url(#mainBg)"/>
+  
+  <!-- 大型光晕装饰 -->
+  <circle cx="200" cy="200" r="400" fill="url(#glow1)"/>
+  <circle cx="1700" cy="900" r="450" fill="url(#glow2)"/>
+  <circle cx="1600" cy="150" r="350" fill="url(#glow3)"/>
+  
+  <!-- 网格图案 -->
+  <g opacity="0.03" stroke="#ffffff" stroke-width="1">
+    <line x1="0" y1="270" x2="1920" y2="270"/>
+    <line x1="0" y1="540" x2="1920" y2="540"/>
+    <line x1="0" y1="810" x2="1920" y2="810"/>
+    <line x1="480" y1="0" x2="480" y2="1080"/>
+    <line x1="960" y1="0" x2="960" y2="1080"/>
+    <line x1="1440" y1="0" x2="1440" y2="1080"/>
+  </g>
+  
+  <!-- 抽象几何装饰 -->
+  <g opacity="0.08">
+    <!-- 左上区域 -->
+    <polygon points="100,100 300,150 250,300 150,250" fill="#3b82f6"/>
+    <circle cx="200" cy="400" r="80" fill="none" stroke="#3b82f6" stroke-width="2"/>
+    <rect x="50" y="600" width="150" height="150" rx="10" fill="none" stroke="#06b6d4" stroke-width="2"/>
+    
+    <!-- 右下区域 -->
+    <polygon points="1700,800 1850,850 1800,950 1650,900" fill="#8b5cf6"/>
+    <circle cx="1750" cy="650" r="60" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+    <rect x="1600" y="400" width="120" height="120" rx="8" fill="none" stroke="#3b82f6" stroke-width="2"/>
+    
+    <!-- 顶部中央 -->
+    <polygon points="900,80 1000,120 950,180 850,140" fill="#06b6d4"/>
+    <circle cx="1100" cy="100" r="50" fill="none" stroke="#3b82f6" stroke-width="2"/>
+  </g>
+  
+  <!-- 浮动粒子 -->
+  <g opacity="0.4">
+    <circle cx="400" cy="300" r="4" fill="#3b82f6">
+      <animate attributeName="cy" values="300;280;300" dur="4s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.4;0.8;0.4" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="800" cy="200" r="3" fill="#06b6d4">
+      <animate attributeName="cy" values="200;180;200" dur="5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.3;0.7;0.3" dur="5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="1500" cy="500" r="5" fill="#8b5cf6">
+      <animate attributeName="cy" values="500;475;500" dur="6s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.4;0.9;0.4" dur="6s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="1200" cy="800" r="3" fill="#3b82f6">
+      <animate attributeName="cy" values="800;785;800" dur="4.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.5;0.8;0.5" dur="4.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="600" cy="900" r="4" fill="#06b6d4">
+      <animate attributeName="cy" values="900;880;900" dur="5.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.3;0.6;0.3" dur="5.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- 光线条纹 -->
+  <g opacity="0.05">
+    <line x1="0" y1="400" x2="1920" y2="300" stroke="url(#glow1)" stroke-width="2"/>
+    <line x1="0" y1="700" x2="1920" y2="650" stroke="url(#glow2)" stroke-width="2"/>
+  </g>
+  
+  <!-- 细微的星光效果 -->
+  <g opacity="0.6">
+    <circle cx="350" cy="150" r="1.5" fill="#ffffff">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="1300" cy="250" r="1.5" fill="#ffffff">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="700" cy="700" r="1.5" fill="#ffffff">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="3.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="1600" cy="600" r="1.5" fill="#ffffff">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+</svg>
+

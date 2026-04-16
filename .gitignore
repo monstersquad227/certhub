@@ -1,0 +1,9 @@
+backend/config/
+backend/scripts/
+
+frontend/node_modules/
+frontend/dist/
+
+sdp/
+tpl/
+prompt/
