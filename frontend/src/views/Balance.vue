@@ -40,6 +40,7 @@
               :data-source="dataSource"
               :loading="loading"
               :pagination="pagination"
+              :scroll="tableScroll"
               @change="handleTableChange"
               row-key="id"
             >
@@ -245,6 +246,25 @@
   position: relative;
   z-index: 1;
 }
+
+@media (max-height: 820px) {
+  .balance-page {
+    max-height: none;
+    overflow: auto;
+  }
+
+  .balance-card-container {
+    min-height: 0;
+  }
+
+  .records-section {
+    overflow: visible;
+  }
+
+  .table-wrapper {
+    min-height: 280px;
+  }
+}
 </style>
 
 <script setup lang="ts">
@@ -257,6 +277,7 @@ const balance = ref(0)
 const loading = ref(false)
 const filterType = ref('')
 const dataSource = ref([])
+const tableScroll = { x: 900 }
 
 const columns: TableColumnsType = [
   {
