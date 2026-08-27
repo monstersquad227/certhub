@@ -1,27 +1,48 @@
 <template>
   <a-layout class="app-layout">
-    <a-layout-header class="layout-header">
-      <div class="layout-logo">CertHub</div>
-      <div class="layout-nav">
-        <a-menu mode="horizontal" theme="dark" :selected-keys="[activeKey]">
-          <a-menu-item key="certificates" @click="go('/certificates')">证书列表</a-menu-item>
-          <a-menu-item key="balance" @click="go('/balance')">余额中心</a-menu-item>
-        </a-menu>
+    <a-layout-sider class="layout-sider" :width="240">
+      <div class="sider-inner">
+        <div class="sider-top">
+          <div class="layout-logo">CertHub</div>
+          <a-menu
+            mode="inline"
+            theme="dark"
+            :selected-keys="[activeKey]"
+            class="sider-menu"
+          >
+            <a-menu-item key="certificates" @click="go('/certificates')">
+              <template #icon><FileProtectOutlined /></template>
+              证书列表
+            </a-menu-item>
+            <a-menu-item key="balance" @click="go('/balance')">
+              <template #icon><WalletOutlined /></template>
+              余额中心
+            </a-menu-item>
+          </a-menu>
+        </div>
+
+        <div class="sider-bottom">
+          <div class="user-section">
+            <span class="user-email">{{ auth.user?.email }}</span>
+            <a-button type="link" @click="onLogout" class="logout-btn">退出</a-button>
+          </div>
+        </div>
       </div>
-      <div class="layout-user">
-        <span class="user-email">{{ auth.user?.email }}</span>
-        <a-button type="link" @click="onLogout" class="logout-btn">退出</a-button>
-      </div>
-    </a-layout-header>
-    <a-layout-content class="layout-content">
-      <router-view />
-    </a-layout-content>
+    </a-layout-sider>
+
+    <a-layout class="main-layout">
+      <a-layout-header class="content-header" />
+      <a-layout-content class="layout-content layout-content-fill">
+        <router-view />
+      </a-layout-content>
+    </a-layout>
   </a-layout>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { FileProtectOutlined, WalletOutlined } from '@ant-design/icons-vue';
 import { useAuthStore } from '@/store/auth';
 
 const route = useRoute();
@@ -46,95 +67,119 @@ function onLogout() {
 <style scoped>
 .app-layout {
   min-height: 100vh;
-  background: #f5f7fa;
 }
 
-.layout-header {
-  background: linear-gradient(135deg, #1a1f3a 0%, #0a0e27 100%);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0 40px;
-  height: 80px;
-  line-height: 80px;
+.layout-sider {
+  background: linear-gradient(180deg, #1a1f3a 0%, #0a0e27 100%) !important;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.layout-sider :deep(.ant-layout-sider-children) {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+}
+
+.sider-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 24px 0 20px;
+}
+
+.sider-top {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .layout-logo {
   font-weight: 900;
-  font-size: 32px;
-  letter-spacing: 2px;
-  background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.95) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  line-height: 80px;
+  font-size: 24px;
+  letter-spacing: 1px;
+  color: #fff;
+  padding: 0 24px 24px;
+  line-height: 1.2;
 }
 
-.layout-nav {
-  flex: 1;
-  margin-left: 40px;
-}
-
-.layout-nav :deep(.ant-menu) {
-  height: 80px;
-  line-height: 80px;
+.sider-menu {
   background: transparent;
-  border: none;
+  border-inline-end: none !important;
 }
 
-.layout-nav :deep(.ant-menu-item) {
-  font-size: 18px;
-  font-weight: 600;
-  padding: 0 32px;
-  height: 80px;
-  line-height: 80px;
-  margin: 0 4px;
+.sider-menu :deep(.ant-menu-item) {
+  margin: 4px 12px;
+  width: calc(100% - 24px);
   border-radius: 8px;
-  transition: all 0.3s;
+  font-size: 15px;
+  font-weight: 500;
 }
 
-.layout-nav :deep(.ant-menu-item:hover) {
-  background: rgba(255, 255, 255, 0.1);
+.sider-menu :deep(.ant-menu-item-selected) {
+  background: rgba(255, 255, 255, 0.15) !important;
 }
 
-.layout-nav :deep(.ant-menu-item-selected) {
-  background: rgba(255, 255, 255, 0.15);
+.sider-bottom {
+  flex-shrink: 0;
+  padding: 16px 16px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.layout-user {
+.user-section {
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 8px;
 }
 
 .user-email {
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 17px;
-  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .logout-btn {
-  color: rgba(255, 255, 255, 0.9);
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 17px;
-  font-weight: 500;
-  transition: all 0.2s;
+  color: rgba(255, 255, 255, 0.65);
+  padding: 0;
   height: auto;
+  font-size: 13px;
+  flex-shrink: 0;
 }
 
 .logout-btn:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.main-layout {
+  margin-left: 240px;
+  width: calc(100% - 240px);
+  min-height: 100vh;
+  background: #f5f7fa;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-header {
+  height: 56px;
+  line-height: 56px;
+  padding: 0;
+  background: #fff;
+  border-bottom: 1px solid #e8ecef;
+  flex-shrink: 0;
 }
 
 .layout-content {
-  padding: var(--spacing-xl);
   background: #f5f7fa;
-  min-height: calc(100vh - 80px);
+  flex: 1;
+  min-height: 0;
 }
 </style>
-

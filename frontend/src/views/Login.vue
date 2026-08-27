@@ -1,45 +1,55 @@
 <template>
   <div class="login-container">
-    <div class="login-bg" aria-hidden="true" />
-    <a-card class="login-card" :bordered="false">
-      <h2 class="login-title">Certhub Platform</h2>
-      <a-form :model="form" layout="vertical" :label-col="{ span: 24 }" class="login-form">
-        <a-form-item label="邮箱">
-          <a-input 
-            v-model:value="form.email" 
-            placeholder="请输入您的邮箱" 
-            size="large"
-            class="login-input"
-          />
-        </a-form-item>
-        <a-form-item label="验证码">
-          <div class="verify-code-group">
+    <section class="login-brand-panel" aria-hidden="true" />
+
+    <section class="login-form-panel">
+      <div class="login-form-wrap">
+        <h2 class="login-title">邮箱登录</h2>
+
+        <a-form :model="form" layout="vertical" class="login-form">
+          <a-form-item label="邮箱">
             <a-input
-              v-model:value="form.code"
-              placeholder="输入验证码"
+              v-model:value="form.email"
+              placeholder="you@company.com"
               size="large"
-              class="verify-code-input"
+              class="login-input"
             />
-            <a-button
-              size="large"
-              type="primary"
-              :loading="sending"
-              :disabled="countdown > 0"
-              @click="onSendCode"
-              class="send-code-btn"
-            >
-              {{ countdown > 0 ? `${countdown}秒` : '发送验证码' }}
+          </a-form-item>
+          <a-form-item label="验证码">
+            <div class="verify-code-group">
+              <a-input
+                v-model:value="form.code"
+                placeholder="6 位数字验证码"
+                size="large"
+                class="verify-code-input"
+                :maxlength="6"
+              />
+              <a-button
+                size="large"
+                :loading="sending"
+                :disabled="countdown > 0"
+                @click="onSendCode"
+                class="send-code-btn"
+              >
+                {{ countdown > 0 ? `${countdown}秒` : '获取验证码' }}
+              </a-button>
+            </div>
+          </a-form-item>
+          <a-form-item class="login-btn-item">
+            <a-button type="primary" size="large" block :loading="loggingIn" @click="onLogin" class="login-btn">
+              登录
             </a-button>
-          </div>
-        </a-form-item>
-        <a-form-item class="login-btn-item">
-          <a-button type="primary" size="large" block :loading="loggingIn" @click="onLogin" class="login-btn">
-            登录
-          </a-button>
-          <p class="login-hint">未注册的邮箱将自动创建账号</p>
-        </a-form-item>
-      </a-form>
-    </a-card>
+          </a-form-item>
+        </a-form>
+
+        <p class="login-terms">
+          登录即代表同意
+          <a href="#" class="terms-link" @click.prevent>服务条款</a>
+          与
+          <a href="#" class="terms-link" @click.prevent>隐私政策</a>
+        </p>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -111,124 +121,90 @@ async function onLogin() {
 
 <style scoped>
 .login-container {
+  width: 100%;
+  height: 100vh;
+  min-height: 100vh;
+  display: flex;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 左侧品牌区 60% */
+.login-brand-panel {
+  flex: 0 0 60%;
+  width: 60%;
+  height: 100%;
+  min-height: 100vh;
+  background: center / cover no-repeat url('../assets/login-bg.jpg');
+}
+
+/* 右侧功能区 40% */
+.login-form-panel {
+  flex: 0 0 40%;
+  width: 40%;
+  height: 100%;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 48px 40px;
+  background: #ffffff;
 }
 
-.login-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: center / cover no-repeat;
-  background-image: url('../assets/login-bg.jpg');
-}
-
-.login-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.28);
-}
-
-.login-card {
+.login-form-wrap {
   width: 100%;
-  max-width: 520px;
-  padding: 32px 44px;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  border-radius: 20px;
-  position: relative;
-  z-index: 1;
-}
-
-.login-card :deep(.ant-card-body) {
-  padding: 0;
-  background: transparent;
+  max-width: 380px;
 }
 
 .login-title {
-  text-align: center;
-  margin: 0 0 26px 0;
-  font-size: 36px;
+  margin: 0 0 32px;
+  font-size: 28px;
   font-weight: 700;
-  background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.82) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: 1px;
-  position: relative;
-}
-
-.login-title::after {
-  content: '';
-  position: absolute;
-  bottom: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60px;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, #3b82f6, transparent);
-  border-radius: 2px;
+  color: #111827;
+  line-height: 1.3;
 }
 
 .login-form :deep(.ant-form-item) {
-  margin-bottom: 14px;
+  margin-bottom: 20px;
 }
 
 .login-form :deep(.ant-form-item-label > label) {
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.92);
+  color: #374151;
   font-size: 14px;
-  margin-bottom: 2px;
-  display: block;
+  height: auto;
 }
 
-/* class 与 ant-input 在同一 input 上，需使用 .login-input.ant-input */
 .login-input.ant-input,
 .verify-code-input.ant-input {
   box-sizing: border-box;
   height: 44px;
   min-height: 44px;
-  line-height: 44px;
-  border-radius: 12px;
-  border: 1.5px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
   font-size: 14px;
-  padding: 0 16px;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.verify-code-input.ant-input {
-  width: 100%;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .login-input.ant-input::placeholder,
 .verify-code-input.ant-input::placeholder {
-  color: rgba(255, 255, 255, 0.45);
+  color: #9ca3af;
 }
 
 .login-input.ant-input:hover,
 .verify-code-input.ant-input:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.16);
+  border-color: #9ca3af;
 }
 
 .login-input.ant-input:focus,
 .login-input.ant-input:focus-visible,
 .verify-code-input.ant-input:focus,
 .verify-code-input.ant-input:focus-visible {
-  border-color: #3b82f6;
-  background: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.22);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
   outline: none;
 }
 
@@ -238,65 +214,101 @@ async function onLogin() {
   align-items: stretch;
 }
 
+.verify-code-input.ant-input {
+  flex: 1;
+  min-width: 0;
+}
+
 .send-code-btn {
   height: 44px;
-  min-width: 150px;
+  min-width: 120px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #2563eb;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.send-code-btn:hover:not(:disabled) {
+  color: #1d4ed8;
+  border-color: #2563eb;
+  background: #eff6ff;
 }
 
 .send-code-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  background: #f9fafb;
 }
 
 .login-btn-item {
-  margin-top: 20px;
+  margin-top: 8px;
   margin-bottom: 0;
-}
-
-.login-hint {
-  margin: 12px 0 0;
-  text-align: center;
-  font-size: 13px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.65);
 }
 
 .login-btn {
   height: 44px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  background: #2563eb;
+  border-color: #2563eb;
 }
 
-/* 响应式设计 */
+.login-btn:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.login-terms {
+  margin: 24px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: #9ca3af;
+  line-height: 1.6;
+}
+
+.terms-link {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.terms-link:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 768px) {
-  .login-card {
-    padding: 26px 20px;
-    margin: 20px;
-    border-radius: 16px;
+  .login-container {
+    flex-direction: column;
+    height: 100vh;
   }
 
-  .login-title {
-    font-size: 28px;
-    margin-bottom: 22px;
+  .login-brand-panel {
+    flex: 6;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    background-position: center;
+    background-size: cover;
+  }
+
+  .login-form-panel {
+    flex: 4;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 32px 24px;
   }
 
   .verify-code-group {
     flex-direction: column;
-    gap: 12px;
   }
 
   .send-code-btn {
     width: 100%;
     min-width: auto;
   }
-
-  .login-form :deep(.ant-form-item) {
-    margin-bottom: 14px;
-  }
-}
-
-/* 加载图标在深色背景上保持可读 */
-.login-btn :deep(.ant-btn-loading-icon),
-.send-code-btn :deep(.ant-btn-loading-icon) {
-  color: rgba(255, 255, 255, 0.8);
 }
 </style>
-

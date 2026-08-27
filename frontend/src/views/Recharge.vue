@@ -124,8 +124,10 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import api from '@/utils/api'
+import { useBalanceStore } from '@/store/balance'
 
 const router = useRouter()
+const balanceStore = useBalanceStore()
 const formRef = ref()
 const submitting = ref(false)
 
@@ -150,8 +152,9 @@ const handleSubmit = async () => {
     const res = await api.post('/api/v1/balance/recharge', form)
     message.success(`充值订单创建成功，订单号：${res.data.order_no}`)
     // 模拟支付成功，直接更新余额
-    setTimeout(() => {
+    setTimeout(async () => {
       message.success('充值成功！')
+      await balanceStore.fetchBalance()
       router.push('/balance')
     }, 1000)
   } catch (error: any) {

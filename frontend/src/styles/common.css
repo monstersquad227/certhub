@@ -34,21 +34,30 @@
 
 /* Page container */
 .page-container {
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   padding: var(--spacing-lg);
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 .page-container-narrow {
-  max-width: 1000px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   padding: var(--spacing-lg);
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 .page-container-detail {
-  max-width: 100%;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   padding: var(--spacing-lg);
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 /* Content spacing */
@@ -75,6 +84,13 @@
   margin-bottom: var(--spacing-lg);
   flex-wrap: wrap;
   align-items: flex-end;
+}
+
+/* Table pagination spacing */
+.table-wrapper .ant-pagination {
+  margin: 16px 0 16px !important;
+  padding-bottom: 4px;
+  flex-shrink: 0;
 }
 
 /* Form container */
@@ -195,6 +211,23 @@
   padding: var(--spacing-xl);
   background: #f5f7fa;
   min-height: calc(100vh - 72px);
+}
+
+.layout-content-fill {
+  padding: 24px;
+  width: 100%;
+  height: calc(100vh - 56px);
+  min-height: calc(100vh - 56px);
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+.layout-content-fill > .page-container,
+.layout-content-fill > .page-container-narrow,
+.layout-content-fill > .page-container-detail {
+  height: 100%;
+  min-height: 100%;
+  padding: 0;
 }
 
 .content-card {

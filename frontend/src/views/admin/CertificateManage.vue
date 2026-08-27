@@ -52,6 +52,9 @@
             {{ getStatusText(record.status) }}
           </a-tag>
         </template>
+        <template v-else-if="column.key === 'created_at' || column.key === 'expires_at'">
+          {{ formatDateTime(record[column.key]) }}
+        </template>
         <template v-else-if="column.key === 'action'">
           <a-space>
             <a-button type="link" size="small" @click="handleEdit(record.id)">
@@ -77,6 +80,7 @@ import api from '@/utils/api'
 import type { TableColumnsType, TableProps } from 'ant-design-vue'
 import dayjs, { type Dayjs } from 'dayjs'
 import { getStatusColor, getStatusText, getCertTypeColor, getCertTypeText } from '@/utils/certificate'
+import { formatDateTime } from '@/utils/date'
 
 const router = useRouter()
 const loading = ref(false)
@@ -112,11 +116,13 @@ const columns: TableColumnsType = [
     title: '申请时间',
     dataIndex: 'created_at',
     key: 'created_at',
+    width: 180,
   },
   {
     title: '过期时间',
     dataIndex: 'expires_at',
     key: 'expires_at',
+    width: 180,
   },
   {
     title: '状态',

@@ -1,6 +1,6 @@
 <template>
-  <div class="page-container">
-    <a-card class="card-modern" :bordered="false">
+  <div class="page-container cert-list-page">
+    <a-card class="card-modern cert-list-card" :bordered="false">
       <div class="filter-bar">
         <a-input
           v-model:value="searchDomain"
@@ -34,6 +34,7 @@
           :data-source="dataSource"
           :loading="loading"
           :pagination="pagination"
+          :scroll="tableScroll"
           @change="handleTableChange"
           row-key="id"
         >
@@ -56,6 +57,9 @@
             <QuestionCircleOutlined style="margin-left: 4px; color: #ff4d4f" />
           </a-tooltip>
         </template>
+        <template v-else-if="column.key === 'created_at' || column.key === 'expires_at'">
+          {{ formatDateTime(record[column.key]) }}
+        </template>
         <template v-else-if="column.key === 'action'">
           <a-space>
             <a-button type="link" size="small" @click="handleView(record.id)">
@@ -71,6 +75,41 @@
 </template>
 
 <style scoped>
+.cert-list-page {
+  height: 100%;
+  max-height: 100%;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.cert-list-card {
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.cert-list-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.cert-list-card :deep(.ant-card-body) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  padding: 24px;
+  height: 100%;
+}
+
 .filter-bar {
   margin-bottom: 20px;
   display: flex;
@@ -78,6 +117,7 @@
   align-items: center;
   flex-wrap: nowrap;
   max-width: 100%;
+  flex-shrink: 0;
 }
 
 .filter-input {
@@ -133,9 +173,49 @@
 }
 
 .table-wrapper {
-  margin-top: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   width: 100%;
-  overflow-x: auto;
+  overflow: hidden;
+}
+
+.table-wrapper :deep(.ant-spin-nested-loading),
+.table-wrapper :deep(.ant-spin-container) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-wrapper :deep(.ant-table-wrapper) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.table-wrapper :deep(.ant-table) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-wrapper :deep(.ant-table-container) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.table-wrapper :deep(.ant-table-body) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto !important;
+}
+
+.table-wrapper :deep(.ant-table-thead) {
+  flex-shrink: 0;
 }
 
 :deep(.ant-btn-link) {
@@ -153,6 +233,35 @@
     width: 100%;
   }
 }
+
+@media (max-height: 820px) {
+  .cert-list-page {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .cert-list-card {
+    height: auto;
+    flex: none;
+    overflow: visible;
+  }
+
+  .cert-list-card :deep(.ant-card-body) {
+    height: auto;
+    overflow: visible;
+  }
+
+  .table-wrapper {
+    flex: none;
+    min-height: 280px;
+    overflow: visible;
+  }
+
+  .table-wrapper :deep(.ant-table-body) {
+    overflow: visible !important;
+  }
+}
 </style>
 
 <script setup lang="ts">
@@ -163,12 +272,14 @@ import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 import api from '@/utils/api'
 import type { TableColumnsType, TableProps } from 'ant-design-vue'
 import { getStatusColor, getStatusText, getCertTypeColor, getCertTypeText, extractErrorMessage } from '@/utils/certificate'
+import { formatDateTime } from '@/utils/date'
 
 const router = useRouter()
 const loading = ref(false)
 const searchDomain = ref('')
 const filterStatus = ref('')
 const dataSource = ref([])
+const tableScroll = { x: 900 }
 
 const columns: TableColumnsType = [
   {
@@ -184,11 +295,13 @@ const columns: TableColumnsType = [
     title: '申请时间',
     dataIndex: 'created_at',
     key: 'created_at',
+    width: 180,
   },
   {
     title: '过期时间',
     dataIndex: 'expires_at',
     key: 'expires_at',
+    width: 180,
   },
   {
     title: '状态',

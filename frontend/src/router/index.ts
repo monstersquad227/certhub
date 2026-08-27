@@ -7,7 +7,6 @@ const CertificateApply = () => import('@/views/CertificateApply.vue');
 const CertificateDetail = () => import('@/views/CertificateDetail.vue');
 const CertificateGenerateDns = () => import('@/views/CertificateGenerateDns.vue');
 const Balance = () => import('@/views/Balance.vue');
-const Recharge = () => import('@/views/Recharge.vue');
 
 const AdminLogin = () => import('@/views/admin/AdminLogin.vue');
 const AdminCertificates = () => import('@/views/admin/CertificateManage.vue');
@@ -60,9 +59,7 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: '/balance/recharge',
-        name: 'Recharge',
-        component: Recharge,
-        meta: { requiresAuth: true }
+        redirect: '/balance',
       }
     ]
   },
