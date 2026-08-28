@@ -23,7 +23,6 @@
         <a-form-item label="支付方式" name="payment_method">
           <a-radio-group v-model:value="form.payment_method" class="payment-group">
             <a-radio value="alipay"> 支付宝 </a-radio>
-            <a-radio value="wechat"> 微信支付 </a-radio>
           </a-radio-group>
         </a-form-item>
 

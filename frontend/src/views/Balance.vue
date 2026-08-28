@@ -13,7 +13,6 @@
           <span class="balance-amount">¥ {{ displayBalance }}</span>
           <span class="balance-currency">CNY</span>
         </div>
-        <div class="account-id">账户 ID · {{ accountId }}</div>
       </div>
       <div class="summary-right">
         <div class="summary-label">本月支出</div>
@@ -71,9 +70,11 @@
           :class="{ selected: paymentMethod === method.value }"
           @click="paymentMethod = method.value"
         >
-          <span class="payment-icon">{{ method.icon }}</span>
-          <span class="payment-name">{{ method.label }}</span>
-          <span class="payment-desc">{{ method.desc }}</span>
+          <img
+            :src="method.iconUrl"
+            :alt="method.label"
+            class="payment-icon-img"
+          />
         </button>
       </div>
     </section>
@@ -91,6 +92,30 @@
       </a-button>
     </div>
     </div>
+
+    <a-modal
+      v-model:open="alipayQrVisible"
+      :footer="null"
+      :width="400"
+      centered
+      destroy-on-close
+    >
+      <div class="alipay-qr-modal">
+        <p class="alipay-qr-hint">请使用支付宝扫描下方二维码完成付款</p>
+        <p class="alipay-qr-amount">¥ {{ rechargeAmountDisplay }}</p>
+        <img :src="alipayQrImg" alt="支付宝收款二维码" class="alipay-qr-img" />
+        <a-button
+          type="primary"
+          size="large"
+          class="alipay-qr-confirm"
+          :loading="submitting"
+          block
+          @click="confirmAlipayPaid"
+        >
+          我已完成付款
+        </a-button>
+      </div>
+    </a-modal>
 
     <section class="section records-section">
       <h3 class="section-title">充值记录</h3>
@@ -132,12 +157,15 @@ import { useAuthStore } from '@/store/auth'
 import { useBalanceStore } from '@/store/balance'
 import { formatDateTime } from '@/utils/date'
 import type { TableColumnsType, TableProps } from 'ant-design-vue'
+import alipayQrImg from '@/assets/alipay.jpg'
+import alipayIcon from '@/assets/ALIPAY_CN.svg'
 
 const auth = useAuthStore()
 const balanceStore = useBalanceStore()
 
 const loading = ref(false)
 const submitting = ref(false)
+const alipayQrVisible = ref(false)
 const dataSource = ref<any[]>([])
 const monthlyExpense = ref(0)
 const tableScroll = { x: 800 }
@@ -155,8 +183,7 @@ const amountOptions = [
 ]
 
 const paymentMethods = [
-  { value: 'alipay', label: '支付宝', icon: '支', desc: '即时到账' },
-  { value: 'wechat', label: '微信支付', icon: '微', desc: '即时到账' },
+  { value: 'alipay', label: '支付宝', iconUrl: alipayIcon },
 ]
 
 const columns: TableColumnsType = [
@@ -177,11 +204,6 @@ const pagination = reactive({
 const displayBalance = computed(() => {
   const value = balanceStore.balance ?? auth.user?.balance ?? 0
   return value.toFixed(2)
-})
-
-const accountId = computed(() => {
-  const id = auth.user?.id ?? 0
-  return `acct_${id.toString(16).padStart(8, '0')}`
 })
 
 const rechargeAmount = computed(() => {
@@ -252,17 +274,14 @@ async function fetchRecords() {
   }
 }
 
-async function handleRecharge() {
-  if (!rechargeAmount.value) {
-    message.warning('请选择或输入充值金额')
-    return
-  }
+async function submitRecharge() {
   submitting.value = true
   try {
     const res = await api.post('/api/v1/balance/recharge', {
       amount: rechargeAmount.value,
       payment_method: paymentMethod.value,
     })
+    alipayQrVisible.value = false
     message.success(`充值订单创建成功，订单号：${res.data.data.order_no}`)
     setTimeout(async () => {
       message.success('充值成功！')
@@ -276,6 +295,22 @@ async function handleRecharge() {
   } finally {
     submitting.value = false
   }
+}
+
+function handleRecharge() {
+  if (!rechargeAmount.value) {
+    message.warning('请选择或输入充值金额')
+    return
+  }
+  if (paymentMethod.value === 'alipay') {
+    alipayQrVisible.value = true
+    return
+  }
+  submitRecharge()
+}
+
+function confirmAlipayPaid() {
+  submitRecharge()
 }
 
 const handleTableChange: TableProps['onChange'] = (pag) => {
@@ -366,12 +401,6 @@ onMounted(() => {
   font-size: 14px;
   color: #888;
   font-weight: 500;
-}
-
-.account-id {
-  font-size: 12px;
-  color: #aaa;
-  word-break: break-all;
 }
 
 .summary-right {
@@ -483,7 +512,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  max-width: 480px;
+  max-width: 340px;
   width: 100%;
 }
 
@@ -491,16 +520,18 @@ onMounted(() => {
   background: #fff;
   border: 1.5px solid #e8ecef;
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 16px 20px;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   gap: 2px;
-  text-align: left;
+  text-align: center;
   min-width: 0;
   width: 100%;
+  min-height: 72px;
 }
 
 .payment-option:hover {
@@ -524,6 +555,14 @@ onMounted(() => {
   font-weight: 700;
   color: #555;
   margin-bottom: 4px;
+}
+
+.payment-icon-img {
+  height: 52px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+  display: block;
 }
 
 .payment-option.selected .payment-icon {
@@ -553,6 +592,43 @@ onMounted(() => {
   height: 40px;
   padding: 0 32px;
   font-size: 15px;
+  font-weight: 600;
+}
+
+.alipay-qr-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0 4px;
+  text-align: center;
+}
+
+.alipay-qr-hint {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #666;
+}
+
+.alipay-qr-amount {
+  margin: 0 0 16px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  letter-spacing: -0.5px;
+}
+
+.alipay-qr-img {
+  width: 240px;
+  height: 240px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.alipay-qr-confirm {
+  margin-top: 20px;
+  border-radius: 10px;
+  height: 40px;
   font-weight: 600;
 }
 
