@@ -1,3 +1,7 @@
+import { Buffer } from 'buffer'
+
+;(globalThis as typeof globalThis & { Buffer: typeof Buffer }).Buffer = Buffer
+
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import Antd from 'ant-design-vue';

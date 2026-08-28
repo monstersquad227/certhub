@@ -74,22 +74,37 @@
             :src="method.iconUrl"
             :alt="method.label"
             class="payment-icon-img"
+            :class="method.iconClass"
           />
         </button>
       </div>
     </section>
 
     <div class="submit-row">
-      <a-button
-        type="primary"
-        size="large"
-        class="submit-btn"
-        :loading="submitting"
-        :disabled="!rechargeAmount"
-        @click="handleRecharge"
-      >
-        确认充值 ¥{{ rechargeAmountDisplay }}
-      </a-button>
+      <div class="submit-col">
+        <p v-if="paymentMethod === 'usdt' && rechargeAmount" class="usdt-live-rate">
+          <span v-if="rateLoading" class="rate-loading">汇率更新中...</span>
+          <template v-else>
+            ≈ {{ usdtAmountDisplay }} USDT
+            <span class="rate-meta">（1 USDT ≈ ¥{{ rateDisplay }}）</span>
+          </template>
+        </p>
+        <a-button
+          type="primary"
+          size="large"
+          class="submit-btn"
+          :loading="submitting"
+          :disabled="!rechargeAmount"
+          @click="handleRecharge"
+        >
+          <template v-if="paymentMethod === 'usdt' && rechargeAmount">
+            确认充值 ¥{{ rechargeAmountDisplay }}（≈ {{ usdtAmountDisplay }} USDT）
+          </template>
+          <template v-else>
+            确认充值 ¥{{ rechargeAmountDisplay }}
+          </template>
+        </a-button>
+      </div>
     </div>
     </div>
 
@@ -100,19 +115,76 @@
       centered
       destroy-on-close
     >
-      <div class="alipay-qr-modal">
-        <p class="alipay-qr-hint">请使用支付宝扫描下方二维码完成付款</p>
-        <p class="alipay-qr-amount">¥ {{ rechargeAmountDisplay }}</p>
-        <img :src="alipayQrImg" alt="支付宝收款二维码" class="alipay-qr-img" />
+      <div class="pay-qr-modal">
+        <p class="pay-qr-hint">请使用支付宝扫描下方二维码完成付款</p>
+        <p class="pay-qr-amount">¥ {{ rechargeAmountDisplay }}</p>
+        <img :src="alipayQrImg" alt="支付宝收款二维码" class="pay-qr-img" />
         <a-button
           type="primary"
           size="large"
-          class="alipay-qr-confirm"
+          class="pay-qr-confirm"
           :loading="submitting"
           block
-          @click="confirmAlipayPaid"
+          @click="confirmPaid"
         >
           我已完成付款
+        </a-button>
+      </div>
+    </a-modal>
+
+    <a-modal
+      v-model:open="usdtQrVisible"
+      :footer="null"
+      :width="400"
+      centered
+      destroy-on-close
+      @after-open="onUsdtModalOpen"
+    >
+      <div class="pay-qr-modal">
+        <p class="pay-qr-hint">连接 Solana 钱包并转账 USDT</p>
+        <p class="pay-qr-amount">¥ {{ rechargeAmountDisplay }}</p>
+        <p class="usdt-equiv">
+          <span v-if="rateLoading">汇率更新中...</span>
+          <template v-else>
+            ≈ {{ usdtAmountDisplay }} USDT
+            <span class="rate-meta">（1 USDT ≈ ¥{{ rateDisplay }}）</span>
+          </template>
+        </p>
+        <img :src="usdtQrImg" alt="USDT Solana 收款二维码" class="pay-qr-img" />
+        <div class="usdt-network">网络：Solana</div>
+        <div class="usdt-address-row">
+          <code class="usdt-address">{{ usdtAddress }}</code>
+          <a-button size="small" @click="copyUsdtAddress">复制</a-button>
+        </div>
+
+        <div class="wallet-panel">
+          <div v-if="connected" class="wallet-connected">
+            <span class="wallet-label">已连接</span>
+            <code class="wallet-address">{{ displayAddress }}</code>
+            <a-button size="small" @click="handleDisconnectWallet">断开</a-button>
+          </div>
+          <a-button
+            v-else
+            size="large"
+            block
+            class="wallet-connect-btn"
+            :loading="connecting"
+            @click="handleConnectWallet"
+          >
+            {{ walletAvailable ? '连接钱包' : '安装 Phantom 钱包' }}
+          </a-button>
+        </div>
+
+        <a-button
+          type="primary"
+          size="large"
+          class="pay-qr-confirm"
+          :loading="transferring || submitting"
+          :disabled="!connected"
+          block
+          @click="handleUsdtTransfer"
+        >
+          转账 USDT
         </a-button>
       </div>
     </a-modal>
@@ -156,9 +228,13 @@ import api from '@/utils/api'
 import { useAuthStore } from '@/store/auth'
 import { useBalanceStore } from '@/store/balance'
 import { formatDateTime } from '@/utils/date'
+import { useSolanaWallet } from '@/composables/useSolanaWallet'
+import { useCnyUsdtRate } from '@/composables/useCnyUsdtRate'
 import type { TableColumnsType, TableProps } from 'ant-design-vue'
 import alipayQrImg from '@/assets/alipay.jpg'
 import alipayIcon from '@/assets/ALIPAY_CN.svg'
+import usdtQrImg from '@/assets/usdt-solana.png'
+import usdtIcon from '@/assets/USDT.svg'
 
 const auth = useAuthStore()
 const balanceStore = useBalanceStore()
@@ -166,6 +242,28 @@ const balanceStore = useBalanceStore()
 const loading = ref(false)
 const submitting = ref(false)
 const alipayQrVisible = ref(false)
+const usdtQrVisible = ref(false)
+const paymentMethod = ref('alipay')
+
+const {
+  walletAvailable,
+  connected,
+  displayAddress,
+  connecting,
+  transferring,
+  connect,
+  disconnect,
+  sendUsdt,
+  syncProviderState,
+} = useSolanaWallet()
+const {
+  loading: rateLoading,
+  rateDisplay,
+  refreshRate,
+  convertCnyToUsdt,
+  formatUsdtAmount,
+} = useCnyUsdtRate(() => paymentMethod.value === 'usdt' || usdtQrVisible.value)
+
 const dataSource = ref<any[]>([])
 const monthlyExpense = ref(0)
 const tableScroll = { x: 800 }
@@ -174,7 +272,8 @@ const selectedAmount = ref(200)
 const isCustomAmount = ref(false)
 const customAmountStr = ref('')
 const customInputRef = ref<HTMLInputElement>()
-const paymentMethod = ref('alipay')
+
+const usdtAddress = 'E77sCPg6KHsZm3d7i3hQXguAK33VLr4vPUJDZ14szFB'
 
 const amountOptions = [
   { value: 50, bonus: null },
@@ -183,7 +282,8 @@ const amountOptions = [
 ]
 
 const paymentMethods = [
-  { value: 'alipay', label: '支付宝', iconUrl: alipayIcon },
+  { value: 'alipay', label: '支付宝', iconUrl: alipayIcon, iconClass: '' },
+  { value: 'usdt', label: 'USDT', iconUrl: usdtIcon, iconClass: 'payment-icon-round' },
 ]
 
 const columns: TableColumnsType = [
@@ -218,6 +318,8 @@ const rechargeAmountDisplay = computed(() => {
   return rechargeAmount.value ? rechargeAmount.value.toFixed(2) : '0.00'
 })
 
+const usdtAmountDisplay = computed(() => formatUsdtAmount(rechargeAmount.value))
+
 function selectAmount(value: number) {
   isCustomAmount.value = false
   customAmountStr.value = ''
@@ -236,7 +338,68 @@ function onCustomInput() {
 function formatPaymentMethod(method: string) {
   if (method === 'alipay') return '支付宝'
   if (method === 'wechat') return '微信'
+  if (method === 'usdt') return 'USDT'
   return method || '-'
+}
+
+async function copyUsdtAddress() {
+  try {
+    await navigator.clipboard.writeText(usdtAddress)
+    message.success('地址已复制')
+  } catch {
+    message.error('复制失败，请手动复制')
+  }
+}
+
+function onUsdtModalOpen() {
+  syncProviderState()
+  void refreshRate()
+}
+
+async function handleConnectWallet() {
+  if (!walletAvailable.value) {
+    window.open('https://phantom.app/', '_blank', 'noopener,noreferrer')
+    return
+  }
+  try {
+    await connect()
+    message.success('钱包已连接')
+  } catch (error: unknown) {
+    const err = error as { message?: string; code?: number }
+    if (err.code === 4001) return
+    message.error(err.message || '连接钱包失败')
+  }
+}
+
+async function handleDisconnectWallet() {
+  try {
+    await disconnect()
+    message.success('钱包已断开')
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    message.error(err.message || '断开钱包失败')
+  }
+}
+
+async function handleUsdtTransfer() {
+  if (!rechargeAmount.value) {
+    message.warning('请选择或输入充值金额')
+    return
+  }
+  if (!connected.value) {
+    message.warning('请先连接钱包')
+    return
+  }
+
+  try {
+    const signature = await sendUsdt(usdtAddress, convertCnyToUsdt(rechargeAmount.value))
+    message.success(`转账成功：${signature.slice(0, 8)}...`)
+    await submitRecharge()
+  } catch (error: unknown) {
+    const err = error as { message?: string; code?: number }
+    if (err.code === 4001) return
+    message.error(err.message || 'USDT 转账失败')
+  }
 }
 
 async function fetchMonthlyExpense() {
@@ -282,6 +445,7 @@ async function submitRecharge() {
       payment_method: paymentMethod.value,
     })
     alipayQrVisible.value = false
+    usdtQrVisible.value = false
     message.success(`充值订单创建成功，订单号：${res.data.data.order_no}`)
     setTimeout(async () => {
       message.success('充值成功！')
@@ -306,10 +470,14 @@ function handleRecharge() {
     alipayQrVisible.value = true
     return
   }
+  if (paymentMethod.value === 'usdt') {
+    usdtQrVisible.value = true
+    return
+  }
   submitRecharge()
 }
 
-function confirmAlipayPaid() {
+function confirmPaid() {
   submitRecharge()
 }
 
@@ -565,6 +733,11 @@ onMounted(() => {
   display: block;
 }
 
+.payment-icon-img.payment-icon-round {
+  height: 40px;
+  width: 40px;
+}
+
 .payment-option.selected .payment-icon {
   background: #dbeafe;
   color: #3b82f6;
@@ -587,6 +760,35 @@ onMounted(() => {
   margin-bottom: 0;
 }
 
+.submit-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.usdt-live-rate {
+  margin: 0;
+  font-size: 13px;
+  color: #26a17b;
+  font-weight: 600;
+  text-align: right;
+}
+
+.rate-meta {
+  margin-left: 4px;
+  font-size: 12px;
+  color: #888;
+  font-weight: 500;
+}
+
+.rate-loading {
+  font-size: 12px;
+  color: #888;
+  font-weight: 500;
+}
+
 .submit-btn {
   border-radius: 10px;
   height: 40px;
@@ -595,7 +797,7 @@ onMounted(() => {
   font-weight: 600;
 }
 
-.alipay-qr-modal {
+.pay-qr-modal {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -603,13 +805,13 @@ onMounted(() => {
   text-align: center;
 }
 
-.alipay-qr-hint {
+.pay-qr-hint {
   margin: 0 0 8px;
   font-size: 14px;
   color: #666;
 }
 
-.alipay-qr-amount {
+.pay-qr-amount {
   margin: 0 0 16px;
   font-size: 28px;
   font-weight: 700;
@@ -617,7 +819,7 @@ onMounted(() => {
   letter-spacing: -0.5px;
 }
 
-.alipay-qr-img {
+.pay-qr-img {
   width: 240px;
   height: 240px;
   object-fit: contain;
@@ -625,7 +827,87 @@ onMounted(() => {
   background: #fafafa;
 }
 
-.alipay-qr-confirm {
+.usdt-equiv {
+  margin: -8px 0 16px;
+  font-size: 14px;
+  color: #26a17b;
+  font-weight: 600;
+}
+
+.usdt-equiv .rate-meta {
+  display: block;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #888;
+  font-weight: 500;
+}
+
+.usdt-network {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #26a17b;
+  font-weight: 600;
+}
+
+.usdt-address-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.usdt-address {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-all;
+  text-align: left;
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #333;
+}
+
+.wallet-panel {
+  margin-top: 16px;
+  width: 100%;
+}
+
+.wallet-connected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 10px;
+}
+
+.wallet-label {
+  font-size: 12px;
+  color: #52c41a;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.wallet-address {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: #333;
+}
+
+.wallet-connect-btn {
+  border-radius: 10px;
+  height: 40px;
+  font-weight: 600;
+}
+
+.pay-qr-confirm {
   margin-top: 20px;
   border-radius: 10px;
   height: 40px;
