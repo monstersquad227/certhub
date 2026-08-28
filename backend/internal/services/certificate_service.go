@@ -167,6 +167,7 @@ func ProcessCertificateAsync(certID uint64, userID uint64, domain string, dns DN
 			Type:          "consume",
 			Amount:        -price,
 			OrderNo:       fmt.Sprintf("C%d", time.Now().UnixNano()),
+			Status:        "completed",
 			CertificateID: &certID,
 			Description:   fmt.Sprintf("%s证书申请", map[bool]string{true: "泛域名", false: "单域名"}[isWildcard]),
 		}
@@ -272,6 +273,7 @@ func IssueCertificate(userID uint64, domain string, dns DNSRecord) (*models.Cert
 			Type:          "consume",
 			Amount:        -price,
 			OrderNo:       fmt.Sprintf("C%d", time.Now().UnixNano()),
+			Status:        "completed",
 			CertificateID: &cert.ID,
 			Description:   fmt.Sprintf("%s证书申请", map[bool]string{true: "泛域名", false: "单域名"}[isWildcard]),
 		}

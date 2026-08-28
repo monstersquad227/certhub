@@ -125,10 +125,69 @@
           class="pay-qr-confirm"
           :loading="submitting"
           block
-          @click="confirmPaid"
+          @click="confirmAlipayPaid"
         >
           我已完成付款
         </a-button>
+      </div>
+    </a-modal>
+
+    <a-modal
+      v-model:open="alipayEmailGuideVisible"
+      :footer="null"
+      :width="480"
+      centered
+      destroy-on-close
+    >
+      <div class="alipay-email-guide">
+        <h3 class="guide-title">请发送邮件完成人工确认</h3>
+        <p class="guide-desc">
+          支付宝付款不会自动到账。请将以下信息发送至
+          <a :href="`mailto:${alipayConfirmEmail}`">{{ alipayConfirmEmail }}</a>
+          ，人工核对后为您充值。
+        </p>
+
+        <div class="guide-field">
+          <span class="guide-label">收件人</span>
+          <div class="guide-value-row">
+            <code>{{ alipayConfirmEmail }}</code>
+            <a-button size="small" @click="copyText(alipayConfirmEmail, '收件人已复制')">复制</a-button>
+          </div>
+        </div>
+
+        <div class="guide-field">
+          <span class="guide-label">流水号</span>
+          <div class="guide-value-row">
+            <code>{{ alipayPendingOrderNo }}</code>
+            <a-button size="small" @click="copyText(alipayPendingOrderNo, '流水号已复制')">复制</a-button>
+          </div>
+        </div>
+
+        <div class="guide-field">
+          <span class="guide-label">登录账号</span>
+          <div class="guide-value-row">
+            <code>{{ loginAccount }}</code>
+            <a-button size="small" @click="copyText(loginAccount, '账号已复制')">复制</a-button>
+          </div>
+        </div>
+
+        <div class="guide-checklist">
+          <p class="guide-label">邮件请务必包含：</p>
+          <ol>
+            <li>系统生成的流水号：{{ alipayPendingOrderNo }}</li>
+            <li>登录账号：{{ loginAccount }}</li>
+            <li>支付宝支付成功截图（附件）</li>
+          </ol>
+        </div>
+
+        <div class="guide-actions">
+          <a-button type="primary" size="large" block :href="alipayMailtoHref">
+            打开邮件客户端
+          </a-button>
+          <a-button size="large" block class="guide-secondary-btn" @click="copyEmailDraft">
+            复制邮件正文
+          </a-button>
+        </div>
       </div>
     </a-modal>
 
@@ -225,7 +284,12 @@
               <span v-else>{{ record.order_no || '-' }}</span>
             </template>
             <template v-else-if="column.key === 'status'">
-              <span class="status-badge success">已到账</span>
+              <span
+                class="status-badge"
+                :class="record.status === 'pending' ? 'pending' : 'success'"
+              >
+                {{ record.status === 'pending' ? '待确认' : '已到账' }}
+              </span>
             </template>
           </template>
         </a-table>
@@ -255,6 +319,9 @@ const balanceStore = useBalanceStore()
 const loading = ref(false)
 const submitting = ref(false)
 const alipayQrVisible = ref(false)
+const alipayEmailGuideVisible = ref(false)
+const alipayPendingOrderNo = ref('')
+const alipayConfirmEmail = 'monstersquad227@gmail.com'
 const usdtQrVisible = ref(false)
 const paymentMethod = ref('alipay')
 
@@ -332,6 +399,30 @@ const rechargeAmountDisplay = computed(() => {
 })
 
 const usdtAmountDisplay = computed(() => formatUsdtAmount(rechargeAmount.value))
+
+const loginAccount = computed(() => auth.user?.email || '-')
+
+const alipayEmailSubject = computed(() => {
+  return `CertHub 支付宝充值确认 - ${alipayPendingOrderNo.value}`
+})
+
+const alipayEmailBody = computed(() => {
+  return [
+    '您好，我已完成支付宝付款，请协助确认并充值。',
+    '',
+    `流水号：${alipayPendingOrderNo.value}`,
+    `登录账号：${loginAccount.value}`,
+    `充值金额：¥${rechargeAmountDisplay.value}`,
+    '',
+    '请查收附件中的支付宝支付截图。',
+  ].join('\n')
+})
+
+const alipayMailtoHref = computed(() => {
+  const subject = encodeURIComponent(alipayEmailSubject.value)
+  const body = encodeURIComponent(alipayEmailBody.value)
+  return `mailto:${alipayConfirmEmail}?subject=${subject}&body=${body}`
+})
 
 function selectAmount(value: number) {
   isCustomAmount.value = false
@@ -511,8 +602,45 @@ function handleRecharge() {
   submitRecharge()
 }
 
-function confirmPaid() {
-  submitRecharge()
+async function copyText(text: string, successMsg: string) {
+  if (!text || text === '-') {
+    message.warning('暂无可复制内容')
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(text)
+    message.success(successMsg)
+  } catch {
+    message.error('复制失败，请手动复制')
+  }
+}
+
+async function copyEmailDraft() {
+  await copyText(alipayEmailBody.value, '邮件正文已复制')
+}
+
+async function confirmAlipayPaid() {
+  if (!rechargeAmount.value) {
+    message.warning('请选择或输入充值金额')
+    return
+  }
+
+  submitting.value = true
+  try {
+    const res = await api.post('/api/v1/balance/recharge', {
+      amount: rechargeAmount.value,
+      payment_method: 'alipay',
+    })
+    alipayPendingOrderNo.value = res.data.data.order_no
+    alipayQrVisible.value = false
+    alipayEmailGuideVisible.value = true
+    pagination.current = 1
+    await fetchRecords()
+  } catch (error: any) {
+    message.error(error.response?.data?.message || '创建充值申请失败')
+  } finally {
+    submitting.value = false
+  }
 }
 
 const handleTableChange: TableProps['onChange'] = (pag) => {
@@ -1047,6 +1175,92 @@ onMounted(() => {
   color: #52c41a;
   background: #f6ffed;
   border: 1px solid #b7eb8f;
+}
+
+.status-badge.pending {
+  color: #d48806;
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+}
+
+.alipay-email-guide {
+  padding: 4px 0 8px;
+}
+
+.guide-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.guide-desc {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #666;
+}
+
+.guide-desc a {
+  color: #1677ff;
+  word-break: break-all;
+}
+
+.guide-field {
+  margin-bottom: 12px;
+}
+
+.guide-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.guide-value-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guide-value-row code {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  word-break: break-all;
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #333;
+}
+
+.guide-checklist {
+  margin: 16px 0;
+  padding: 12px 14px;
+  background: #fafafa;
+  border-radius: 10px;
+  border: 1px solid #f0f0f0;
+}
+
+.guide-checklist ol {
+  margin: 0;
+  padding-left: 18px;
+  color: #555;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.guide-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.guide-secondary-btn {
+  border-radius: 10px;
+  height: 40px;
 }
 
 @media (max-width: 1100px) {

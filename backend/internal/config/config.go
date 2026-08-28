@@ -56,6 +56,20 @@ type AESConfig struct {
 	Key string `mapstructure:"key"`
 }
 
+type USDTConfig struct {
+	Enabled                 bool    `mapstructure:"enabled"`
+	Recipient               string  `mapstructure:"recipient"`
+	Mint                    string  `mapstructure:"mint"`
+	Decimals                int     `mapstructure:"decimals"`
+	RPCURL                  string  `mapstructure:"rpc_url"`
+	AmountTolerancePercent  float64 `mapstructure:"amount_tolerance_percent"`
+	FallbackCnyPerUsdt      float64 `mapstructure:"fallback_cny_per_usdt"`
+}
+
+type PaymentConfig struct {
+	USDT USDTConfig `mapstructure:"usdt"`
+}
+
 type Config struct {
 	// Env 为当前选用的数据库环境名（如 prod、dev），来自 config.yaml 的 env 或 CERHUB_ENV。
 	Env      string         `mapstructure:"-"`
@@ -67,6 +81,7 @@ type Config struct {
 	Cert     CertConfig     `mapstructure:"cert"`
 	ACME     ACMEConfig     `mapstructure:"acme"`
 	AES      AESConfig      `mapstructure:"aes"`
+	Payment  PaymentConfig  `mapstructure:"payment"`
 }
 
 type fileConfig struct {
@@ -79,6 +94,7 @@ type fileConfig struct {
 	Cert     CertConfig                    `mapstructure:"cert"`
 	ACME     ACMEConfig                    `mapstructure:"acme"`
 	AES      AESConfig                     `mapstructure:"aes"`
+	Payment  PaymentConfig                 `mapstructure:"payment"`
 }
 
 var C Config
@@ -122,4 +138,21 @@ func Init() {
 	C.Cert = raw.Cert
 	C.ACME = raw.ACME
 	C.AES = raw.AES
+	C.Payment = raw.Payment
+
+	if C.Payment.USDT.RPCURL == "" {
+		C.Payment.USDT.RPCURL = "https://solana-rpc.publicnode.com"
+	}
+	if C.Payment.USDT.Mint == "" {
+		C.Payment.USDT.Mint = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+	}
+	if C.Payment.USDT.Decimals <= 0 {
+		C.Payment.USDT.Decimals = 6
+	}
+	if C.Payment.USDT.AmountTolerancePercent <= 0 {
+		C.Payment.USDT.AmountTolerancePercent = 3
+	}
+	if C.Payment.USDT.FallbackCnyPerUsdt <= 0 {
+		C.Payment.USDT.FallbackCnyPerUsdt = 7.2
+	}
 }

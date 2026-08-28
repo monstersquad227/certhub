@@ -1,8 +1,10 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"certhub-backend/internal/config"
@@ -21,11 +23,36 @@ func GetUserBalance(userID uint64) (float64, error) {
 	return user.Balance, nil
 }
 
-// CreateRechargeOrder creates a recharge balance record (simulate payment).
-// For USDT payments, txHash should be the on-chain Solana transaction signature.
+// CreateRechargeOrder creates a recharge balance record.
+// USDT: verify on-chain tx then credit immediately (status=completed).
+// Alipay: create pending order only; balance is credited manually by operators.
 func CreateRechargeOrder(userID uint64, amount float64, paymentMethod string, txHash string) (*models.BalanceRecord, error) {
 	orderNo := fmt.Sprintf("R%d", time.Now().UnixNano())
-	if paymentMethod == "usdt" && txHash != "" {
+	status := "completed"
+	description := "充值"
+
+	switch paymentMethod {
+	case "alipay":
+		status = "pending"
+		description = "支付宝待人工确认"
+	case "usdt":
+		txHash = strings.TrimSpace(txHash)
+		if txHash == "" {
+			return nil, ErrTxHashInvalid
+		}
+
+		var existing models.BalanceRecord
+		if err := database.DB.Where("order_no = ?", txHash).First(&existing).Error; err == nil {
+			return nil, errors.New("该交易哈希已用于充值")
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+		defer cancel()
+		if _, err := VerifySolanaUSDTTransfer(ctx, txHash, amount); err != nil {
+			return nil, err
+		}
 		orderNo = txHash
 	}
 
@@ -35,17 +62,32 @@ func CreateRechargeOrder(userID uint64, amount float64, paymentMethod string, tx
 		Amount:        amount,
 		PaymentMethod: paymentMethod,
 		OrderNo:       orderNo,
-		Description:   "充值",
+		Status:        status,
+		Description:   description,
 	}
 
 	if err := database.DB.Create(record).Error; err != nil {
+		if isDuplicateOrderNo(err) {
+			return nil, errors.New("该交易哈希已用于充值")
+		}
 		return nil, err
 	}
-	// Immediately apply recharge for V1.0.0
-	if err := applyBalanceChange(userID, amount); err != nil {
-		return nil, err
+
+	// Alipay pending orders do not credit balance; operators update DB manually.
+	if status == "completed" {
+		if err := applyBalanceChange(userID, amount); err != nil {
+			return nil, err
+		}
 	}
 	return record, nil
+}
+
+func isDuplicateOrderNo(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "duplicate") || strings.Contains(msg, "uk_order_no")
 }
 
 // ConsumeBalance consumes balance for certificate purchase.
@@ -68,6 +110,7 @@ func ConsumeBalance(userID uint64, certificateID uint64, amount float64, desc st
 		Type:          "consume",
 		Amount:        -amount,
 		OrderNo:       orderNo,
+		Status:        "completed",
 		CertificateID: &certificateID,
 		Description:   desc,
 	}
@@ -76,7 +119,6 @@ func ConsumeBalance(userID uint64, certificateID uint64, amount float64, desc st
 		if err := tx.Create(record).Error; err != nil {
 			return err
 		}
-		// deduct
 		if err := tx.Model(&models.User{}).
 			Where("id = ? AND balance >= ?", userID, amount).
 			Update("balance", gorm.Expr("balance - ?", amount)).Error; err != nil {
@@ -128,5 +170,3 @@ func GetCertPrice(isWildcard bool) float64 {
 	}
 	return config.C.Cert.PriceSingle
 }
-
-

@@ -118,13 +118,12 @@ export async function transferUsdt(
 
   const { signature } = await provider.signAndSendTransaction(transaction)
 
-  try {
-    await connection.confirmTransaction(
-      { signature, blockhash, lastValidBlockHeight },
-      'confirmed',
-    )
-  } catch {
-    // Wallet may already confirm via its own RPC; keep signature if broadcast succeeded.
+  const confirmation = await connection.confirmTransaction(
+    { signature, blockhash, lastValidBlockHeight },
+    'confirmed',
+  )
+  if (confirmation.value.err) {
+    throw new Error('链上交易执行失败')
   }
 
   return signature
