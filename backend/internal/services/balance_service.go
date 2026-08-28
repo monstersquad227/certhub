@@ -22,8 +22,12 @@ func GetUserBalance(userID uint64) (float64, error) {
 }
 
 // CreateRechargeOrder creates a recharge balance record (simulate payment).
-func CreateRechargeOrder(userID uint64, amount float64, paymentMethod string) (*models.BalanceRecord, error) {
+// For USDT payments, txHash should be the on-chain Solana transaction signature.
+func CreateRechargeOrder(userID uint64, amount float64, paymentMethod string, txHash string) (*models.BalanceRecord, error) {
 	orderNo := fmt.Sprintf("R%d", time.Now().UnixNano())
+	if paymentMethod == "usdt" && txHash != "" {
+		orderNo = txHash
+	}
 
 	record := &models.BalanceRecord{
 		UserID:        userID,

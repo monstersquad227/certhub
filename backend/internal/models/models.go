@@ -42,7 +42,7 @@ type BalanceRecord struct {
 	Type          string  `gorm:"type:varchar(20);not null;index:idx_type" json:"type"` // recharge/consume
 	Amount        float64 `gorm:"type:decimal(10,2);not null" json:"amount"`
 	PaymentMethod string  `gorm:"type:varchar(20)" json:"payment_method"` // alipay/wechat/usdt
-	OrderNo       string  `gorm:"type:varchar(64);uniqueIndex:uk_order_no;not null" json:"order_no"`
+	OrderNo       string  `gorm:"type:varchar(128);uniqueIndex:uk_order_no;not null" json:"order_no"`
 	CertificateID *uint64 `gorm:"index" json:"certificate_id,omitempty"`
 	Description   string  `gorm:"type:varchar(255)" json:"description"`
 }

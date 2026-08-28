@@ -48,6 +48,7 @@ func GetBalanceRecords(c *gin.Context) {
 type rechargeRequest struct {
 	Amount        float64 `json:"amount" binding:"required"`
 	PaymentMethod string  `json:"payment_method" binding:"required"`
+	TxHash        string  `json:"tx_hash"`
 }
 
 // POST /api/v1/balance/recharge
@@ -60,8 +61,12 @@ func CreateRechargeOrder(c *gin.Context) {
 		utils.Error(c, http.StatusBadRequest, http.StatusBadRequest, "参数错误")
 		return
 	}
+	if req.PaymentMethod == "usdt" && req.TxHash == "" {
+		utils.Error(c, http.StatusBadRequest, http.StatusBadRequest, "缺少链上交易哈希")
+		return
+	}
 
-	record, err := services.CreateRechargeOrder(userID, req.Amount, req.PaymentMethod)
+	record, err := services.CreateRechargeOrder(userID, req.Amount, req.PaymentMethod, req.TxHash)
 	if err != nil {
 		utils.Error(c, http.StatusInternalServerError, http.StatusInternalServerError, "创建充值订单失败")
 		return

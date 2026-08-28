@@ -211,6 +211,19 @@
             <template v-else-if="column.key === 'created_at'">
               {{ formatDateTime(record.created_at) }}
             </template>
+            <template v-else-if="column.key === 'order_no'">
+              <a
+                v-if="isUsdtTxHash(record)"
+                :href="getSolanaExplorerUrl(record.order_no)"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="tx-hash-link"
+                :title="record.order_no"
+              >
+                {{ formatTxHash(record.order_no) }}
+              </a>
+              <span v-else>{{ record.order_no || '-' }}</span>
+            </template>
             <template v-else-if="column.key === 'status'">
               <span class="status-badge success">已到账</span>
             </template>
@@ -342,6 +355,19 @@ function formatPaymentMethod(method: string) {
   return method || '-'
 }
 
+function isUsdtTxHash(record: { payment_method?: string; order_no?: string }) {
+  return record.payment_method === 'usdt' && Boolean(record.order_no)
+}
+
+function formatTxHash(hash: string, chars = 6) {
+  if (!hash || hash.length <= chars * 2 + 3) return hash
+  return `${hash.slice(0, chars)}...${hash.slice(-chars)}`
+}
+
+function getSolanaExplorerUrl(signature: string) {
+  return `https://solscan.io/tx/${encodeURIComponent(signature)}`
+}
+
 async function copyUsdtAddress() {
   try {
     await navigator.clipboard.writeText(usdtAddress)
@@ -394,7 +420,7 @@ async function handleUsdtTransfer() {
   try {
     const signature = await sendUsdt(usdtAddress, convertCnyToUsdt(rechargeAmount.value))
     message.success(`转账成功：${signature.slice(0, 8)}...`)
-    await submitRecharge()
+    await submitRecharge(signature)
   } catch (error: unknown) {
     const err = error as { message?: string; code?: number }
     if (err.code === 4001) return
@@ -437,16 +463,24 @@ async function fetchRecords() {
   }
 }
 
-async function submitRecharge() {
+async function submitRecharge(txHash?: string) {
   submitting.value = true
   try {
-    const res = await api.post('/api/v1/balance/recharge', {
+    const payload: {
+      amount: number | null
+      payment_method: string
+      tx_hash?: string
+    } = {
       amount: rechargeAmount.value,
       payment_method: paymentMethod.value,
-    })
+    }
+    if (paymentMethod.value === 'usdt' && txHash) {
+      payload.tx_hash = txHash
+    }
+    const res = await api.post('/api/v1/balance/recharge', payload)
     alipayQrVisible.value = false
     usdtQrVisible.value = false
-    message.success(`充值订单创建成功，订单号：${res.data.data.order_no}`)
+    message.success(`充值订单创建成功，订单号：${formatTxHash(res.data.data.order_no)}`)
     setTimeout(async () => {
       message.success('充值成功！')
       await balanceStore.fetchBalance()
@@ -987,6 +1021,18 @@ onMounted(() => {
 .record-amount {
   color: #3f8600;
   font-weight: 600;
+}
+
+.tx-hash-link {
+  color: #1677ff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.tx-hash-link:hover {
+  color: #0958d9;
+  text-decoration: underline;
 }
 
 .status-badge {
